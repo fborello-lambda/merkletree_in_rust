@@ -42,9 +42,14 @@ Merkle Tree:
 Here `"D"` is duplicated and we get the following:
 
 ```mermaid
-graph BT;
-    D --> left("h(D) = 6c3fd")
-    D --> right("h(D) = 6c3fd")
+flowchart BT;
+    D(D) --> left("h(D) = 6c3fd")
+    D_copy("D") --> right("h(D) = 6c3fd")
+
+    subgraph "Copy operation"
+        direction LR
+        D --> D_copy
+    end
     root("h(h(D)+h(D)) = 5bba9")
     left --> root
     right --> root
