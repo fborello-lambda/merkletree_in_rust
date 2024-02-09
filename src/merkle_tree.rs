@@ -139,22 +139,40 @@ impl MerkleTree {
         };
         writeln!(
             f,
-            "{} {}- {}",
+            "{}{}{}-{}",
             indent,
+            MerkleTree::get_arrow(level),
             dir,
-            node.hash.chars().take(5).collect::<String>()
+            node.hash
         )?;
         if let Some(left_node) = &node.left_node {
             MerkleTree::print_node(f, left_node.as_ref(), level + 1, Dir::Left)?;
         } else {
-            writeln!(f, "{}left- None", "    ".repeat(level + 1))?;
+            writeln!(
+                f,
+                "{}{}left-None",
+                "    ".repeat(level + 1),
+                MerkleTree::get_arrow(level),
+            )?;
         }
         if let Some(right_node) = &node.right_node {
             MerkleTree::print_node(f, right_node.as_ref(), level + 1, Dir::Right)?;
         } else {
-            writeln!(f, "{}right- None", "    ".repeat(level + 1))?;
+            writeln!(
+                f,
+                "{}{}Right-None",
+                "    ".repeat(level + 1),
+                MerkleTree::get_arrow(level),
+            )?;
         }
         Ok(())
+    }
+    fn get_arrow(level: usize) -> String {
+        if level > 0 {
+            format!("{:─<1}", "└──>")
+        } else {
+            String::new()
+        }
     }
 }
 
