@@ -52,10 +52,13 @@ impl Tree {
     }
 
     pub fn insert(&mut self, value: i32) {
+        /* for insert_recursive
         match &mut self.root {
             None => self.root = Node::new(value).into(),
             Some(node) => Tree::insert_recursive(node, value),
         }
+        */
+        self.insert_iterative(value)
     }
 
     fn insert_recursive(node: &mut Box<Node>, value: i32) {
@@ -69,6 +72,31 @@ impl Tree {
                 Some(n) => Tree::insert_recursive(n, value),
             },
             // if the value is equal
+        }
+    }
+
+    fn insert_iterative(&mut self, value: i32) {
+        if self.root.is_none() {
+            self.root = Node::new(value).into();
+            return;
+        }
+
+        let mut q: Vec<&mut Box<Node>> = Vec::new();
+        let root = self.root.as_mut().unwrap();
+        q.push(root);
+
+        while let Some(node) = q.pop() {
+            match value.cmp(&node.item) {
+                std::cmp::Ordering::Greater | std::cmp::Ordering::Equal => match node.right {
+                    ref mut right @ None => *right = Node::new(value).into(),
+                    Some(ref mut n) => q.push(n),
+                },
+                std::cmp::Ordering::Less => match node.left {
+                    ref mut left @ None => *left = Node::new(value).into(),
+                    Some(ref mut n) => q.push(n),
+                },
+                // if the value is equal
+            }
         }
     }
 
@@ -117,7 +145,7 @@ impl Tree {
     }
     fn get_arrow(level: usize) -> String {
         if level > 0 {
-            format!("{:─<1}", "└──>")
+            String::from("└──>")
         } else {
             String::new()
         }
