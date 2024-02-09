@@ -85,18 +85,42 @@ impl Tree {
             Dir::Right => "right",
             Dir::Root => "root",
         };
-        writeln!(f, "{} {}- {}", indent, dir, node.item)?;
+        writeln!(
+            f,
+            "{}{}{}-{}",
+            indent,
+            Tree::get_arrow(level),
+            dir,
+            node.item
+        )?;
         if let Some(left_node) = &node.left {
             Tree::print_node(f, left_node.as_ref(), level + 1, Dir::Left)?;
         } else {
-            writeln!(f, "{}left- None", "    ".repeat(level + 1))?;
+            writeln!(
+                f,
+                "{}{}left-None",
+                "    ".repeat(level + 1),
+                Tree::get_arrow(level),
+            )?;
         }
         if let Some(right_node) = &node.right {
             Tree::print_node(f, right_node.as_ref(), level + 1, Dir::Right)?;
         } else {
-            writeln!(f, "{}right- None", "    ".repeat(level + 1))?;
+            writeln!(
+                f,
+                "{}{}right-None",
+                "    ".repeat(level + 1),
+                Tree::get_arrow(level),
+            )?;
         }
         Ok(())
+    }
+    fn get_arrow(level: usize) -> String {
+        if level > 0 {
+            format!("{:─<1}", "└──>")
+        } else {
+            String::new()
+        }
     }
 }
 
@@ -109,6 +133,8 @@ mod tests {
         tree.insert(8);
         tree.insert(10);
         tree.insert(3);
+        tree.insert(7);
+        tree.insert(2);
         println!("{tree}");
     }
 }
