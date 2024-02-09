@@ -1,3 +1,4 @@
+mod binary_tree;
 mod merkle_tree;
 use crate::merkle_tree::MerkleTree;
 fn main() {
