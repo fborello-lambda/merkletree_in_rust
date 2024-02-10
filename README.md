@@ -12,6 +12,8 @@ To simplify the data structure, instead of using an arrangement based on `Option
 
 The main goal of the project is to practice Rust Programming, understand the MerkleTree data structure and know its potential.
 
+An issue that may arise is the need to recalculate the entire tree when a leaf is added. However, this is a tradeoff between memory usage, which would be required to store all the hashes in memory, and the algorithm's efficiency. By only storing the initial leaves and the root, memory requirements are reduced by half compared to an implementation that stores all the leaf hashes up to the root. Additionally, the use of a Vec illustrates the concept of the Merkle Tree in a straightforward manner.
+
 ## How?
 
 ```sh
