@@ -91,7 +91,7 @@ impl<'a> MerkleTreeVec<'a> {
 
         for h in &value_n_hashed_path[1..] {
             println!("{h}");
-            let combined_hash = keccak256(&format!("{}{}", check_root, h));
+            let combined_hash = (self.hash_fn)(&format!("{}{}", check_root, h));
 
             check_root = combined_hash;
         }
