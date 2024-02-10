@@ -80,10 +80,10 @@ impl MerkleTreeVec {
         *self = MerkleTreeVec::new(new_initial_leaves);
     }
 
-    pub fn in_merkletree(self, hashes_value_n_path: Vec<String>) -> bool {
-        let mut check_root = keccak256(hashes_value_n_path.first().unwrap());
+    pub fn in_merkletree(self, value_n_hashed_path: Vec<String>) -> bool {
+        let mut check_root = keccak256(value_n_hashed_path.first().unwrap());
 
-        for h in &hashes_value_n_path[1..] {
+        for h in &value_n_hashed_path[1..] {
             println!("{h}");
             let combined_hash = keccak256(&format!("{}{}", check_root, h));
 
