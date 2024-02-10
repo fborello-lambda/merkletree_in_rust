@@ -181,8 +181,6 @@ mod tests {
     use super::MerkleTreeDs;
     use super::*;
     #[test]
-    #[allow(dead_code)]
-    #[allow(unused_variables)]
     fn test_new_no_duplication() {
         let d = "D".to_string();
         let e = "E".to_string();
