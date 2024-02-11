@@ -20,15 +20,14 @@ pub fn keccak256(s: &str) -> String {
 // Otherwise, additional copy operations may be required at each level of the computation as needed.
 impl<'a> MerkleTreeVec<'a> {
     pub fn new(
-        initial_leaves: Vec<String>,
+        initial_leaves: &[String],
         hash_fn: &'a dyn Fn(&str) -> String,
     ) -> MerkleTreeVec<'a> {
         let mut upper_children: Vec<String> = Vec::new();
 
         let hashed_initial_leaves = initial_leaves
-            .clone()
-            .into_iter()
-            .map(|s| hash_fn(&s))
+            .iter()
+            .map(|s| hash_fn(s))
             .collect::<Vec<String>>();
 
         for chunk in hashed_initial_leaves.chunks(2) {
@@ -48,7 +47,7 @@ impl<'a> MerkleTreeVec<'a> {
         if upper_children.len() == 1 {
             return MerkleTreeVec {
                 root: upper_children.pop().unwrap(),
-                initial_leaves,
+                initial_leaves: initial_leaves.into(),
                 hash_fn,
             };
         }
@@ -74,7 +73,7 @@ impl<'a> MerkleTreeVec<'a> {
 
         MerkleTreeVec {
             root: upper_children.pop().unwrap(),
-            initial_leaves,
+            initial_leaves: initial_leaves.into(),
             hash_fn,
         }
     }
@@ -83,8 +82,10 @@ impl<'a> MerkleTreeVec<'a> {
         let mut new_initial_leaves = self.initial_leaves.clone();
         new_initial_leaves.append(new_leaves);
 
-        *self = MerkleTreeVec::new(new_initial_leaves, self.hash_fn);
+        *self = MerkleTreeVec::new(&new_initial_leaves, self.hash_fn);
     }
+
+    pub fn get_proof(&mut self, item: &str) {}
 
     pub fn verify(&self, value_n_hashed_path: Vec<String>, index: u32) -> bool {
         let mut check_root = keccak256(value_n_hashed_path.first().unwrap());
@@ -132,7 +133,7 @@ mod tests {
 
         let cmp = keccak256(&format!("{}{}", d_hash, e_hash));
 
-        let mtree = MerkleTreeVec::new(vec![d, e], &keccak256);
+        let mtree = MerkleTreeVec::new(&vec![d, e], &keccak256);
 
         assert_eq!(mtree.root, cmp);
     }
@@ -143,7 +144,7 @@ mod tests {
 
         let cmp = keccak256(&format!("{}{}", d_hash, d_hash));
 
-        let mtree = MerkleTreeVec::new(vec![d], &keccak256);
+        let mtree = MerkleTreeVec::new(&vec![d], &keccak256);
 
         assert_eq!(mtree.root, cmp);
     }
@@ -157,7 +158,7 @@ mod tests {
 
         let cmp = keccak256(&format!("{}{}", d_hash, e_hash));
 
-        let mut mtree = MerkleTreeVec::new(vec![d], &keccak256);
+        let mut mtree = MerkleTreeVec::new(&vec![d], &keccak256);
         mtree.push_to_initial(&mut vec![e]);
 
         assert_eq!(mtree.root, cmp);
@@ -178,7 +179,7 @@ mod tests {
 
         let values_n_path = vec![d.clone(), e_hash, fg_hash];
 
-        let mtree = MerkleTreeVec::new(vec![d.clone(), e, f, g], &keccak256);
+        let mtree = MerkleTreeVec::new(&vec![d.clone(), e, f, g], &keccak256);
         let d_index = mtree.get_index(&d.clone()).unwrap();
         assert!(mtree.verify(values_n_path, d_index));
     }
