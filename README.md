@@ -4,7 +4,7 @@
 
 This project involves creating a Merkle Tree from a `Vec<String>`, utilizing `crypto::sha3::Sha3::keccak256()` as the hash function.
 
-In the initial implementation, the aim is to maintain the leaves of all levels as `MerkleTreeDs` (MerkleTreeDataStructure). The `new` operation is straightforward. However, adding or pushing a new leaf and verifying if an element exists in the Merkle tree given the "path" require a more sophisticated algorithm (Merkle Patricia Tree).
+In the initial implementation, the aim is to maintain the leaves of all levels as `MerkleTreeDs` (MerkleTreeDataStructure). The `new` operation is straightforward. However, adding or pushing a new leaf and verifying if an element exists in the Merkle tree given the "path" require a more sophisticated algorithm ([Merkle Patricia Trie](https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie)).
 
 To simplify the data structure, instead of using an arrangement based on `Option<Box<Node>>`—where each node contains an item along with left and right nodes—we propose employing a `Vec<String>` to store the initial leaves. The resulting `MerkleTreeVec` structure only holds the initial leaves and the root. One drawback is that recalculating the root needs to be recomputed entirely if a new leaf is added or pushed.
 

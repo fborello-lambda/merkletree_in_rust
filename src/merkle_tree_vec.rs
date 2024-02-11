@@ -86,16 +86,33 @@ impl<'a> MerkleTreeVec<'a> {
         *self = MerkleTreeVec::new(new_initial_leaves, self.hash_fn);
     }
 
-    pub fn in_merkletree(self, value_n_hashed_path: Vec<String>) -> bool {
+    pub fn verify(&self, value_n_hashed_path: Vec<String>, index: u32) -> bool {
         let mut check_root = keccak256(value_n_hashed_path.first().unwrap());
-
+        let mut combined_hash;
         for h in &value_n_hashed_path[1..] {
-            println!("{h}");
-            let combined_hash = (self.hash_fn)(&format!("{}{}", check_root, h));
+            if index % 2 == 0 {
+                combined_hash = (self.hash_fn)(&format!("{}{}", check_root, h));
+            } else {
+                combined_hash = (self.hash_fn)(&format!("{}{}", h, check_root));
+            }
 
             check_root = combined_hash;
         }
         check_root == self.root
+    }
+
+    pub fn get_index(&self, item: &str) -> Option<u32> {
+        let index = self.initial_leaves.iter().position(|x| x == item);
+        match index {
+            Some(idx) => {
+                if let Ok(u32_index) = u32::try_from(idx) {
+                    Some(u32_index)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
     }
 }
 
@@ -147,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_in_merkletree() {
+    fn test_verify() {
         let d = "D".to_string();
         let e = "E".to_string();
         let f = "F".to_string();
@@ -161,8 +178,8 @@ mod tests {
 
         let values_n_path = vec![d.clone(), e_hash, fg_hash];
 
-        let mtree = MerkleTreeVec::new(vec![d, e, f, g], &keccak256);
-
-        assert!(mtree.in_merkletree(values_n_path));
+        let mtree = MerkleTreeVec::new(vec![d.clone(), e, f, g], &keccak256);
+        let d_index = mtree.get_index(&d.clone()).unwrap();
+        assert!(mtree.verify(values_n_path, d_index));
     }
 }
