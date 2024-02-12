@@ -85,9 +85,93 @@ impl<'a> MerkleTreeVec<'a> {
         *self = MerkleTreeVec::new(&new_initial_leaves, self.hash_fn);
     }
 
-    pub fn get_proof(&mut self, item: &str) {}
+    pub fn get_proof(&self, item: &str) -> Vec<String> {
+        let mut upper_children: Vec<String> = Vec::new();
+        let mut proof: Vec<String> = Vec::new();
+        let mut index_item = self.get_index(item).unwrap();
 
-    pub fn verify(&self, value_n_hashed_path: Vec<String>, index: u32) -> bool {
+        let hashed_initial_leaves = self
+            .initial_leaves
+            .iter()
+            .map(|s| (self.hash_fn)(s))
+            .collect::<Vec<String>>();
+
+        proof.push(item.into());
+
+        for (index, chunk) in hashed_initial_leaves.chunks(2).enumerate() {
+            let left = chunk[0].clone();
+            // "Balance" the tree -> Duplicate if there is no right leaf
+            let right = if chunk.len() > 1 {
+                chunk[1].clone()
+            } else {
+                chunk[0].clone()
+            };
+
+            // Check if the item's index falls within the current chunk
+            let chunk_start_index = index * 2;
+            if chunk_start_index <= index_item && index_item < chunk_start_index + 2 {
+                // Calculate the relative index within the chunk
+                let relative_index = index_item - chunk_start_index;
+
+                // Add the sibling to the proof vector based on the relative index within the chunk
+                if relative_index == 0 {
+                    proof.push(right.clone());
+                } else {
+                    proof.push(left.clone());
+                }
+
+                // Update index_item to the index of the parent node
+                index_item = index;
+            }
+
+            let combined_hash = (self.hash_fn)(&format!("{}{}", left, right));
+
+            upper_children.push(combined_hash);
+        }
+
+        if upper_children.len() == 1 {
+            return proof;
+        }
+
+        while upper_children.len() > 1 {
+            let mut new_upper_children: Vec<String> = Vec::new();
+
+            for (index, chunk) in upper_children.chunks(2).enumerate() {
+                let left = chunk[0].clone();
+                // "Balance" the tree -> Duplicate if there is no right leaf
+                let right = if chunk.len() > 1 {
+                    chunk[1].clone()
+                } else {
+                    chunk[0].clone()
+                };
+
+                let combined_hash = (self.hash_fn)(&format!("{}{}", left, right));
+
+                // Check if the item's index falls within the current chunk
+                let chunk_start_index = index * 2;
+                if chunk_start_index <= index_item && index_item < chunk_start_index + 2 {
+                    // Calculate the relative index within the chunk
+                    let relative_index = index_item - chunk_start_index;
+
+                    // Add the sibling to the proof vector based on the relative index within the chunk
+                    if relative_index == 0 {
+                        proof.push(right.clone());
+                    } else {
+                        proof.push(left.clone());
+                    }
+
+                    // Update index_item to the index of the parent node
+                    index_item = index;
+                }
+
+                new_upper_children.push(combined_hash);
+            }
+            upper_children = new_upper_children;
+        }
+        proof
+    }
+
+    pub fn verify(&self, value_n_hashed_path: Vec<String>, index: usize) -> bool {
         let mut check_root = keccak256(value_n_hashed_path.first().unwrap());
         let mut combined_hash;
         for h in &value_n_hashed_path[1..] {
@@ -102,18 +186,8 @@ impl<'a> MerkleTreeVec<'a> {
         check_root == self.root
     }
 
-    pub fn get_index(&self, item: &str) -> Option<u32> {
-        let index = self.initial_leaves.iter().position(|x| x == item);
-        match index {
-            Some(idx) => {
-                if let Ok(u32_index) = u32::try_from(idx) {
-                    Some(u32_index)
-                } else {
-                    None
-                }
-            }
-            None => None,
-        }
+    pub fn get_index(&self, item: &str) -> Option<usize> {
+        self.initial_leaves.iter().position(|x| x == item)
     }
 }
 
@@ -133,7 +207,7 @@ mod tests {
 
         let cmp = keccak256(&format!("{}{}", d_hash, e_hash));
 
-        let mtree = MerkleTreeVec::new(&vec![d, e], &keccak256);
+        let mtree = MerkleTreeVec::new(&[d, e], &keccak256);
 
         assert_eq!(mtree.root, cmp);
     }
@@ -144,7 +218,7 @@ mod tests {
 
         let cmp = keccak256(&format!("{}{}", d_hash, d_hash));
 
-        let mtree = MerkleTreeVec::new(&vec![d], &keccak256);
+        let mtree = MerkleTreeVec::new(&[d], &keccak256);
 
         assert_eq!(mtree.root, cmp);
     }
@@ -158,7 +232,7 @@ mod tests {
 
         let cmp = keccak256(&format!("{}{}", d_hash, e_hash));
 
-        let mut mtree = MerkleTreeVec::new(&vec![d], &keccak256);
+        let mut mtree = MerkleTreeVec::new(&[d], &keccak256);
         mtree.push_to_initial(&mut vec![e]);
 
         assert_eq!(mtree.root, cmp);
@@ -179,8 +253,85 @@ mod tests {
 
         let values_n_path = vec![d.clone(), e_hash, fg_hash];
 
-        let mtree = MerkleTreeVec::new(&vec![d.clone(), e, f, g], &keccak256);
+        let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g], &keccak256);
         let d_index = mtree.get_index(&d.clone()).unwrap();
         assert!(mtree.verify(values_n_path, d_index));
+    }
+    #[test]
+    fn test_get_proof_of4() {
+        let d = "D".to_string();
+        let e = "E".to_string();
+        let f = "F".to_string();
+        let g = "G".to_string();
+
+        let e_hash = keccak256(&e);
+        let f_hash = keccak256(&f);
+        let g_hash = keccak256(&g);
+
+        let fg_hash = keccak256(&format!("{}{}", f_hash, g_hash));
+
+        let values_n_path = vec![d.clone(), e_hash, fg_hash];
+
+        let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g], &keccak256);
+        let proof = mtree.get_proof(&d.clone());
+        assert_eq!(proof, values_n_path);
+    }
+    #[test]
+    fn test_get_proof_of8() {
+        let d = "D".to_string();
+        let e = "E".to_string();
+        let f = "F".to_string();
+        let g = "G".to_string();
+        let h = "H".to_string();
+        let i = "I".to_string();
+        let j = "J".to_string();
+        let k = "K".to_string();
+
+        let d_hash = keccak256(&d);
+        let e_hash = keccak256(&e);
+        let f_hash = keccak256(&f);
+        let g_hash = keccak256(&g);
+        let h_hash = keccak256(&h);
+        let i_hash = keccak256(&i);
+        let j_hash = keccak256(&j);
+        let k_hash = keccak256(&k);
+
+        let de_hash = keccak256(&format!("{}{}", d_hash, e_hash));
+        let fg_hash = keccak256(&format!("{}{}", f_hash, g_hash));
+        let jk_hash = keccak256(&format!("{}{}", j_hash, k_hash));
+        let defg_hash = keccak256(&format!("{}{}", de_hash, fg_hash));
+
+        let values_n_path = vec![h.clone(), i_hash, jk_hash, defg_hash];
+
+        let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g, h.clone(), i, j, k], &keccak256);
+        let proof = mtree.get_proof(&h);
+        assert_eq!(proof, values_n_path);
+    }
+    #[test]
+    fn test_get_proof_of8_with_dup() {
+        let d = "D".to_string();
+        let e = "E".to_string();
+        let f = "F".to_string();
+        let g = "G".to_string();
+        let h = "H".to_string();
+        let i = "I".to_string();
+
+        let d_hash = keccak256(&d);
+        let e_hash = keccak256(&e);
+        let f_hash = keccak256(&f);
+        let g_hash = keccak256(&g);
+        let h_hash = keccak256(&h);
+        let i_hash = keccak256(&i);
+
+        let de_hash = keccak256(&format!("{}{}", d_hash, e_hash));
+        let fg_hash = keccak256(&format!("{}{}", f_hash, g_hash));
+        let hi_hash = keccak256(&format!("{}{}", h_hash, i_hash));
+        let defg_hash = keccak256(&format!("{}{}", de_hash, fg_hash));
+
+        let values_n_path = vec![i.clone(), h_hash, hi_hash, defg_hash];
+
+        let mtree = MerkleTreeVec::new(&[d, e, f, g, h, i.clone()], &keccak256);
+        let proof = mtree.get_proof(&i);
+        assert_eq!(proof, values_n_path);
     }
 }
