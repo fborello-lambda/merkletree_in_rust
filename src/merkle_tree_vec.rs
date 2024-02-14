@@ -95,10 +95,10 @@ impl<'a> MerkleTreeVec<'a> {
         *self = MerkleTreeVec::new(&new_initial_leaves, self.hash_fn);
     }
 
-    pub fn get_proof(&self, item: &str) -> Vec<String> {
+    pub fn get_proof(&self, item: &str) -> Result<Vec<String>, String> {
         let mut upper_children: Vec<String> = Vec::new();
         let mut proof: Vec<String> = Vec::new();
-        let mut index_item = self.get_index(item).unwrap();
+        let mut index_item = self.get_index(item)?;
 
         let hashed_initial_leaves = self
             .initial_leaves
@@ -138,7 +138,7 @@ impl<'a> MerkleTreeVec<'a> {
         }
 
         if upper_children.len() == 1 {
-            return proof;
+            return Ok(proof);
         }
 
         while upper_children.len() > 1 {
@@ -176,11 +176,11 @@ impl<'a> MerkleTreeVec<'a> {
             }
             upper_children = new_upper_children;
         }
-        proof
+        Ok(proof)
     }
 
-    pub fn verify(&self, proof: Vec<String>, item: &str) -> bool {
-        let index = self.get_index(item).unwrap();
+    pub fn verify(&self, proof: Vec<String>, item: &str) -> Result<bool, String> {
+        let index = self.get_index(item)?;
         let mut check_root = keccak256(item);
         let mut combined_hash;
         for h in &proof {
@@ -192,11 +192,15 @@ impl<'a> MerkleTreeVec<'a> {
 
             check_root = combined_hash;
         }
-        check_root == self.root
+        Ok(check_root == self.root)
     }
 
-    pub fn get_index(&self, item: &str) -> Option<usize> {
-        self.initial_leaves.iter().position(|x| x == item)
+    pub fn get_index(&self, item: &str) -> Result<usize, String> {
+        let index = self.initial_leaves.iter().position(|x| x == item);
+        match index {
+            Some(x) => return Ok(x),
+            None => return Err("Item not found".to_string()),
+        }
     }
 }
 
@@ -264,7 +268,7 @@ mod tests {
 
         let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g], &keccak256);
 
-        assert!(mtree.verify(proof, "D"));
+        assert!(mtree.verify(proof, "D").unwrap());
     }
     #[test]
     fn test_get_proof_of4() {
@@ -283,7 +287,7 @@ mod tests {
 
         let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g], &keccak256);
         let proof = mtree.get_proof(&d.clone());
-        assert_eq!(proof, proof_verify);
+        assert_eq!(proof.unwrap(), proof_verify);
     }
     #[test]
     fn test_get_proof_of8() {
@@ -314,7 +318,7 @@ mod tests {
 
         let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g, h.clone(), i, j, k], &keccak256);
         let proof = mtree.get_proof(&h);
-        assert_eq!(proof, proof_verify);
+        assert_eq!(proof.unwrap(), proof_verify);
     }
     #[test]
     fn test_get_proof_of8_with_dup() {
@@ -341,6 +345,6 @@ mod tests {
 
         let mtree = MerkleTreeVec::new(&[d, e, f, g, h, i.clone()], &keccak256);
         let proof = mtree.get_proof(&i);
-        assert_eq!(proof, proof_verify);
+        assert_eq!(proof.unwrap(), proof_verify);
     }
 }
