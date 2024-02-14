@@ -198,8 +198,8 @@ impl<'a> MerkleTreeVec<'a> {
     pub fn get_index(&self, item: &str) -> Result<usize, String> {
         let index = self.initial_leaves.iter().position(|x| x == item);
         match index {
-            Some(x) => return Ok(x),
-            None => return Err("Item not found".to_string()),
+            Some(x) => Ok(x),
+            None => Err("Item not found".to_string()),
         }
     }
 }
