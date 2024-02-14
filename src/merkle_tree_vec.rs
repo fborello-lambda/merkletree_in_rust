@@ -15,6 +15,16 @@ pub fn keccak256(s: &str) -> String {
     sha3.result_str()
 }
 
+#[macro_export]
+macro_rules! slice_to_string {
+    ($($x:expr),*) => ([$($x.to_string()),*]);
+}
+
+#[macro_export]
+macro_rules! vec_to_string {
+    ($($x:expr),*) => (vec![$($x.to_string()),*]);
+}
+
 // This code assumes that the length of initial_leaves is a power of 2 (i.e., initial_leaves.len() == 2^N).
 // This condition must be satisfied for optimal performance.
 // Otherwise, additional copy operations may be required at each level of the computation as needed.
@@ -96,8 +106,6 @@ impl<'a> MerkleTreeVec<'a> {
             .map(|s| (self.hash_fn)(s))
             .collect::<Vec<String>>();
 
-        proof.push(item.into());
-
         for (index, chunk) in hashed_initial_leaves.chunks(2).enumerate() {
             let left = chunk[0].clone();
             // "Balance" the tree -> Duplicate if there is no right leaf
@@ -171,10 +179,11 @@ impl<'a> MerkleTreeVec<'a> {
         proof
     }
 
-    pub fn verify(&self, value_n_hashed_path: Vec<String>, index: usize) -> bool {
-        let mut check_root = keccak256(value_n_hashed_path.first().unwrap());
+    pub fn verify(&self, proof: Vec<String>, item: &str) -> bool {
+        let index = self.get_index(item).unwrap();
+        let mut check_root = keccak256(item);
         let mut combined_hash;
-        for h in &value_n_hashed_path[1..] {
+        for h in &proof {
             if index % 2 == 0 {
                 combined_hash = (self.hash_fn)(&format!("{}{}", check_root, h));
             } else {
@@ -251,11 +260,11 @@ mod tests {
 
         let fg_hash = keccak256(&format!("{}{}", f_hash, g_hash));
 
-        let values_n_path = vec![d.clone(), e_hash, fg_hash];
+        let proof = vec![e_hash, fg_hash];
 
         let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g], &keccak256);
-        let d_index = mtree.get_index(&d.clone()).unwrap();
-        assert!(mtree.verify(values_n_path, d_index));
+
+        assert!(mtree.verify(proof, "D"));
     }
     #[test]
     fn test_get_proof_of4() {
@@ -270,11 +279,11 @@ mod tests {
 
         let fg_hash = keccak256(&format!("{}{}", f_hash, g_hash));
 
-        let values_n_path = vec![d.clone(), e_hash, fg_hash];
+        let proof_verify = vec![e_hash, fg_hash];
 
         let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g], &keccak256);
         let proof = mtree.get_proof(&d.clone());
-        assert_eq!(proof, values_n_path);
+        assert_eq!(proof, proof_verify);
     }
     #[test]
     fn test_get_proof_of8() {
@@ -301,11 +310,11 @@ mod tests {
         let jk_hash = keccak256(&format!("{}{}", j_hash, k_hash));
         let defg_hash = keccak256(&format!("{}{}", de_hash, fg_hash));
 
-        let values_n_path = vec![h.clone(), i_hash, jk_hash, defg_hash];
+        let proof_verify = vec![i_hash, jk_hash, defg_hash];
 
         let mtree = MerkleTreeVec::new(&[d.clone(), e, f, g, h.clone(), i, j, k], &keccak256);
         let proof = mtree.get_proof(&h);
-        assert_eq!(proof, values_n_path);
+        assert_eq!(proof, proof_verify);
     }
     #[test]
     fn test_get_proof_of8_with_dup() {
@@ -328,10 +337,10 @@ mod tests {
         let hi_hash = keccak256(&format!("{}{}", h_hash, i_hash));
         let defg_hash = keccak256(&format!("{}{}", de_hash, fg_hash));
 
-        let values_n_path = vec![i.clone(), h_hash, hi_hash, defg_hash];
+        let proof_verify = vec![h_hash, hi_hash, defg_hash];
 
         let mtree = MerkleTreeVec::new(&[d, e, f, g, h, i.clone()], &keccak256);
         let proof = mtree.get_proof(&i);
-        assert_eq!(proof, values_n_path);
+        assert_eq!(proof, proof_verify);
     }
 }
