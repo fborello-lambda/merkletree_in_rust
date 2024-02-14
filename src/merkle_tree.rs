@@ -14,7 +14,7 @@ pub struct Node {
 type Leaf = Option<Box<Node>>;
 
 #[derive(Debug)]
-pub struct MerkleTree {
+pub struct MerkleTreeDs {
     pub root: Leaf,
 }
 
@@ -25,11 +25,11 @@ enum Dir {
     Root,
 }
 
-impl fmt::Display for MerkleTree {
+impl fmt::Display for MerkleTreeDs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(root) = &self.root {
             writeln!(f, "Merkle Tree:")?;
-            MerkleTree::print_node(f, root, 0, Dir::Root)?;
+            MerkleTreeDs::print_node(f, root, 0, Dir::Root)?;
         } else {
             write!(f, "Empty Merkle Tree")?;
         }
@@ -37,8 +37,8 @@ impl fmt::Display for MerkleTree {
     }
 }
 
-impl MerkleTree {
-    pub fn new(initial_leaves: Vec<String>) -> MerkleTree {
+impl MerkleTreeDs {
+    pub fn new(initial_leaves: Vec<String>) -> MerkleTreeDs {
         //todo!("Check Length");
         let mut upper_children: Vec<Leaf> = Vec::new();
 
@@ -86,7 +86,7 @@ impl MerkleTree {
         }
 
         if upper_children.len() == 1 {
-            return MerkleTree {
+            return MerkleTreeDs {
                 root: upper_children.pop().unwrap(),
             };
         }
@@ -119,7 +119,7 @@ impl MerkleTree {
             upper_children = new_upper_children;
         }
 
-        MerkleTree {
+        MerkleTreeDs {
             root: upper_children.pop().unwrap(),
         }
     }
@@ -141,35 +141,35 @@ impl MerkleTree {
             f,
             "{}{}{}-{}",
             indent,
-            MerkleTree::get_arrow(level),
+            MerkleTreeDs::get_arrow(level),
             dir,
-            node.hash
+            node.hash.chars().take(5).collect::<String>()
         )?;
         if let Some(left_node) = &node.left_node {
-            MerkleTree::print_node(f, left_node.as_ref(), level + 1, Dir::Left)?;
+            MerkleTreeDs::print_node(f, left_node.as_ref(), level + 1, Dir::Left)?;
         } else {
             writeln!(
                 f,
                 "{}{}left-None",
                 "    ".repeat(level + 1),
-                MerkleTree::get_arrow(level),
+                MerkleTreeDs::get_arrow(level),
             )?;
         }
         if let Some(right_node) = &node.right_node {
-            MerkleTree::print_node(f, right_node.as_ref(), level + 1, Dir::Right)?;
+            MerkleTreeDs::print_node(f, right_node.as_ref(), level + 1, Dir::Right)?;
         } else {
             writeln!(
                 f,
-                "{}{}Right-None",
+                "{}{}right-None",
                 "    ".repeat(level + 1),
-                MerkleTree::get_arrow(level),
+                MerkleTreeDs::get_arrow(level),
             )?;
         }
         Ok(())
     }
     fn get_arrow(level: usize) -> String {
         if level > 0 {
-            format!("{:─<1}", "└──>")
+            String::from("└──>")
         } else {
             String::new()
         }
@@ -178,11 +178,9 @@ impl MerkleTree {
 
 #[cfg(test)]
 mod tests {
-    use super::MerkleTree;
+    use super::MerkleTreeDs;
     use super::*;
     #[test]
-    #[allow(dead_code)]
-    #[allow(unused_variables)]
     fn test_new_no_duplication() {
         let d = "D".to_string();
         let e = "E".to_string();
@@ -201,7 +199,7 @@ mod tests {
         let mut sha3 = Sha3::keccak256();
         sha3.input_str(&format!("{}{}", d_hash, e_hash));
 
-        let mtree = MerkleTree::new(vec![d, e]);
+        let mtree = MerkleTreeDs::new(vec![d, e]);
 
         assert_eq!(mtree.root.unwrap().hash, sha3.result_str());
     }
@@ -218,7 +216,7 @@ mod tests {
         let mut sha3 = Sha3::keccak256();
         sha3.input_str(&format!("{}{}", d_hash, d_hash));
 
-        let mtree = MerkleTree::new(vec![d]);
+        let mtree = MerkleTreeDs::new(vec![d]);
 
         assert_eq!(mtree.root.unwrap().hash, sha3.result_str());
     }
